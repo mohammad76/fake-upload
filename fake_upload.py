@@ -142,6 +142,12 @@ class ParallelUploader:
                 path = "/dev/null"
             elif self.target_host == "httpbin.org":
                 path = "/post"
+            elif self.target_host == "postman-echo.com":
+                path = "/post"
+            elif self.target_host == "webhook.site":
+                path = "/" + getattr(self, 'webhook_id', 'test')
+            elif self.target_host in ["127.0.0.1", "localhost"]:
+                path = "/upload"
             
             headers = (
                 f"POST {path} HTTP/1.1\r\n"
