@@ -52,6 +52,12 @@ class ParallelUploader:
     def test_connection(self):
         """Test connection to server before starting"""
         print("Testing connection to server...")
+        
+        # Special handling for public null services
+        if self.target_host in ['devnull-as-a-service.com', 'httpbin.org']:
+            print(f"✓ Using public service: {self.target_host}\n")
+            return True
+        
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
@@ -129,12 +135,21 @@ class ParallelUploader:
             
             # Build HTTP POST request
             content_length = len(data)
+            
+            # Special path for different services
+            path = "/upload"
+            if self.target_host == "devnull-as-a-service.com":
+                path = "/dev/null"
+            elif self.target_host == "httpbin.org":
+                path = "/post"
+            
             headers = (
-                f"POST /upload HTTP/1.1\r\n"
+                f"POST {path} HTTP/1.1\r\n"
                 f"Host: {self.target_host}\r\n"
                 f"Content-Length: {content_length}\r\n"
                 f"Content-Type: application/octet-stream\r\n"
-                f"Connection: keep-alive\r\n"
+                f"User-Agent: FakeUploader/1.0\r\n"
+                f"Connection: close\r\n"
                 f"\r\n"
             ).encode()
             
@@ -145,6 +160,9 @@ class ParallelUploader:
             # Try to read response (optional)
             try:
                 response = sock.recv(1024)
+                # Check if response is successful
+                if b'200' in response or b'OK' in response:
+                    return True
             except:
                 pass
             
@@ -312,7 +330,13 @@ def main():
         epilog="""
 Usage Examples:
   
-  # Upload 400GB in 24 hours with 4 parallel threads:
+  # Upload to public null service (recommended - no server needed):
+  python fake_upload.py -g 400 --null-service
+  
+  # Upload to httpbin.org (public service):
+  python fake_upload.py -g 100 --httpbin
+  
+  # Upload 400GB in 24 hours with 4 parallel threads to local server:
   python fake_upload.py -g 400
   
   # Upload 100GB in 12 hours with 8 parallel threads:
@@ -326,17 +350,27 @@ Usage Examples:
   
   # High-speed upload with small chunks and many threads:
   python fake_upload.py -g 500 -s 5 -t 16
+  
+Public Services (no server setup needed):
+  --null-service : Use devnull-as-a-service.com (recommended)
+  --httpbin      : Use httpbin.org/post (testing service)
         """
     )
     
     parser.add_argument('-g', '--gigabytes', type=float, required=True,
                         help='Gigabytes to upload (example: 400)')
     
-    parser.add_argument('-H', '--host', type=str, default='localhost',
+    parser.add_argument('-H', '--host', type=str, default=None,
                         help='Target server address (default: localhost)')
     
-    parser.add_argument('-p', '--port', type=int, default=8080,
-                        help='Server port (default: 8080)')
+    parser.add_argument('-p', '--port', type=int, default=None,
+                        help='Server port (default: 80 for public services, 8080 for local)')
+    
+    parser.add_argument('--null-service', action='store_true',
+                        help='Use devnull-as-a-service.com (public null service, no server needed)')
+    
+    parser.add_argument('--httpbin', action='store_true',
+                        help='Use httpbin.org (public testing service, no server needed)')
     
     parser.add_argument('-s', '--chunk-size', type=int, default=10,
                         help='Chunk size in megabytes (default: 10)')
@@ -352,6 +386,21 @@ Usage Examples:
     
     args = parser.parse_args()
     
+    # Determine target host and port
+    if args.null_service:
+        target_host = 'devnull-as-a-service.com'
+        target_port = 80
+        print("✓ Using public null service: devnull-as-a-service.com")
+        print("  (No server setup needed - data goes to /dev/null)\n")
+    elif args.httpbin:
+        target_host = 'httpbin.org'
+        target_port = 80
+        print("✓ Using public testing service: httpbin.org")
+        print("  (No server setup needed - public HTTP testing service)\n")
+    else:
+        target_host = args.host if args.host else 'localhost'
+        target_port = args.port if args.port else 8080
+    
     # Validate arguments
     if args.threads < 1 or args.threads > 100:
         print("Error: Number of threads must be between 1 and 100")
@@ -366,8 +415,8 @@ Usage Examples:
     
     # Create and run uploader
     uploader = ParallelUploader(
-        target_host=args.host,
-        target_port=args.port,
+        target_host=target_host,
+        target_port=target_port,
         daily_gb=args.gigabytes,
         chunk_size_mb=args.chunk_size,
         continuous=args.continuous,
