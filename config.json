@@ -1,0 +1,52 @@
+{
+  "profiles": {
+    "default": {
+      "description": "Default profile - 400GB per day",
+      "gigabytes": 400,
+      "host": "localhost",
+      "port": 9,
+      "chunk_size_mb": 10,
+      "duration_hours": 24,
+      "continuous": false
+    },
+    "light": {
+      "description": "Light upload - 50GB per day",
+      "gigabytes": 50,
+      "host": "localhost",
+      "port": 9,
+      "chunk_size_mb": 5,
+      "duration_hours": 24,
+      "continuous": false
+    },
+    "heavy": {
+      "description": "Heavy upload - 1TB per day",
+      "gigabytes": 1000,
+      "host": "localhost",
+      "port": 9,
+      "chunk_size_mb": 20,
+      "duration_hours": 24,
+      "continuous": false
+    },
+    "continuous": {
+      "description": "Continuous upload",
+      "gigabytes": 100,
+      "host": "localhost",
+      "port": 9,
+      "chunk_size_mb": 10,
+      "duration_hours": 24,
+      "continuous": true
+    }
+  },
+  "servers": {
+    "local_discard": {
+      "description": "Local discard server",
+      "host": "localhost",
+      "port": 9
+    },
+    "local_http": {
+      "description": "Local HTTP server",
+      "host": "localhost",
+      "port": 8080
+    }
+  }
+}
